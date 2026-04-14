@@ -207,3 +207,55 @@ git push -u origin main
 ```
 
 If pushing fails due to large files, track only source/docs and move large model/data artifacts to release storage or Git LFS.
+
+## Contributing
+
+### Branching
+
+- Create feature branches from `main`:
+  - `feature/<short-name>`
+- Keep PRs focused and small when possible.
+
+### Local Validation Before PR
+
+Run the minimum quality gate:
+
+```powershell
+pytest tests/unit -q
+pytest tests/integration -q
+```
+
+For frontend changes, also run:
+
+```powershell
+Set-Location frontend
+npm run lint
+npm run build
+npm run test:e2e
+```
+
+### Commit Guidelines
+
+- Use clear, action-oriented commit messages.
+- Mention impacted subsystem when useful (for example: `server`, `frontend`, `detection`, `scripts`).
+- Update docs/config examples when behavior changes.
+
+## Release Checklist
+
+Use this checklist before tagging or sharing a release build.
+
+1. Verify config profile to be shipped (`config/default.yaml`, `config/smoke.yaml`, or `config/edge.yaml`).
+2. Run preflight and resolve all blockers.
+3. Validate model registry integrity and hashes.
+4. Execute smoke pipeline and confirm artifact output.
+5. Run Python unit/integration tests.
+6. Run frontend lint/build and E2E tests if frontend is part of release.
+7. Confirm README and operational docs match runtime behavior.
+8. Tag release and push tag.
+
+Suggested release commands:
+
+```powershell
+git tag -a v0.1.0 -m "AFS v0.1.0"
+git push origin v0.1.0
+```
