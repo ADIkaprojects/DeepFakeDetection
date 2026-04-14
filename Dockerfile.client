@@ -1,0 +1,6 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY . /app
+RUN pip install --no-cache-dir -r requirements.txt
+CMD ["python", "-m", "mcp_client.capture_client", "--config", "config/default.yaml", "--rpc-endpoint", "http://mcp-server:8080/rpc"]

@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+
+# Node/frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Logs and runtime artifacts
+logs/
+*.log
+validation/*.png
+validation/*.json
+!validation/benchmark_report.md
+
+# Data and model artifacts (keep docs/registry only)
+data/
+models/*.pth
+models/checkpoints/
+
+# Local package/cache folders
+.pip-cache/
+.pip-tmp/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Large vendored research repos (clone separately as needed)
+gitrepos/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip

@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: afs-feedback
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: afs-feedback
+  template:
+    metadata:
+      labels:
+        app: afs-feedback
+    spec:
+      containers:
+        - name: feedback
+          image: your-registry/afs-feedback:latest

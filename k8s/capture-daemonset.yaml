@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: afs-capture-client
+spec:
+  selector:
+    matchLabels:
+      app: afs-capture-client
+  template:
+    metadata:
+      labels:
+        app: afs-capture-client
+    spec:
+      containers:
+        - name: capture-client
+          image: your-registry/afs-client:latest
+          env:
+            - name: AFS_RPC_ENDPOINT
+              value: http://mcp-server:8080/rpc

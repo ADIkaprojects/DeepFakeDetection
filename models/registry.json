@@ -1,0 +1,18 @@
+{
+  "models": {
+    "reface_atn": {
+      "name": "reface_atn",
+      "path": "models/reface_atn.pth",
+      "sha256": "d0cf0861bd9da0e982f8c8c167878338180700033d02199cd046d1d1bb6d13b6",
+      "architecture": "ReFaceATN-ResUNet",
+      "exported_at": "2026-04-11"
+    },
+    "deepsafe": {
+      "name": "deepsafe",
+      "path": "models/deepsafe.pth",
+      "sha256": "6ef9d4ba27ac325f77a2eb678d511d3440ff08045cc661da83fd5a183c357eee",
+      "architecture": "CLIP:ViT-L/14",
+      "exported_at": "2026-04-11"
+    }
+  }
+}

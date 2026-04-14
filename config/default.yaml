@@ -1,0 +1,54 @@
+pipeline:
+  fps_target: 30
+  resolution: [1280, 720]
+  alpha_initial: 0.12
+  alpha_max: 0.30
+  alpha_min: 0.08
+  alpha_decay_rate: 0.02
+  feedback_interval_frames: 5
+  feedback_confidence_threshold: 0.70
+  transport_mode: stdio
+
+detection:
+  backend: mediapipe
+  min_detection_confidence: 0.7
+  min_tracking_confidence: 0.5
+
+perturbation:
+  atn_input_size: 224
+  device: cuda
+  model_key: reface_atn
+
+feedback:
+  enabled: false
+  use_ufd_backend: false  # false keeps lightweight runtime backend; true uses heavier UFD backend for closer notebook parity
+  model_key: deepsafe
+  input_size: 224
+  high_threshold: 0.70
+  low_threshold: 0.40
+  increase_step: 0.02
+
+ci:
+  counts_as_production_evidence: true
+  gate_label: strict
+
+transport:
+  mode: stdio
+  host: 0.0.0.0
+  http_port: 8080
+  auth:
+    api_key: afs-local-dev-key
+  rate_limit:
+    enabled: true
+    requests_per_window: 120
+    window_seconds: 60
+
+logging:
+  level: INFO
+  output: logs/afs.jsonl
+  metrics_port: 9090
+
+models:
+  registry_path: models/registry.json
+  strict_startup: true
+  allow_identity_fallback: false

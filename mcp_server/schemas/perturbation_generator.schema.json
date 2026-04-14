@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "perturbation_generator",
+  "type": "object",
+  "required": ["face_b64"],
+  "properties": {
+    "face_b64": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+aiohttp==3.11.18
+mediapipe==0.10.9
+mypy==1.16.1
+numpy==2.2.5
+opencv-python==4.11.0.86
+prometheus-client==0.21.1
+pyvirtualcam==0.12.1
+pytest==8.3.5
+PyYAML==6.0.2
+requests==2.32.3
+torch==2.7.0
+torchvision==0.22.0
+flake8==7.2.0
+jsonschema==4.23.0
+scikit-image==0.25.2
