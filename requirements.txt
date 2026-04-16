@@ -12,4 +12,8 @@ torch==2.7.0
 torchvision==0.22.0
 flake8==7.2.0
 jsonschema==4.23.0
-scikit-image==0.25.2
+scikit-image==0.24.0
+timm==0.9.16
+transformers==4.40.1
+torchmetrics==1.4.0
+tqdm==4.66.4

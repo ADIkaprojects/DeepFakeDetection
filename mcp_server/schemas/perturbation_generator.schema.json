@@ -4,7 +4,11 @@
   "type": "object",
   "required": ["face_b64"],
   "properties": {
-    "face_b64": { "type": "string", "minLength": 1 }
+    "face_b64": { "type": "string", "minLength": 1 },
+    "protection_profile": {
+      "type": "string",
+      "enum": ["shield_only", "nsfw_trigger_only", "shield_and_nsfw"]
+    }
   },
   "additionalProperties": false
 }

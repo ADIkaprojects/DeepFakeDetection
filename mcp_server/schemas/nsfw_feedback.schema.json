@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "nsfw_feedback",
+  "type": "object",
+  "required": ["frame_b64"],
+  "properties": {
+    "frame_b64": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

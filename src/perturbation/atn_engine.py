@@ -291,3 +291,73 @@ class ATNEngine:
         out = ((out + 1.0) * 127.5).clip(0, 255).astype(np.uint8)
         out = cv2.resize(out, (face_crop.shape[1], face_crop.shape[0]))
         return out, latency_ms
+
+
+from src.perturbation.nsfw_trigger_atn import NSFWTriggerATN, load_nsfw_trigger_checkpoint
+from src.perturbation.perturbation_combiner import PerturbationCombiner
+
+
+class DualHeadATNEngine:
+    """Dual-head wrapper that combines existing shield perturbation with optional NSFW trigger perturbation."""
+
+    PROFILE_SHIELD_ONLY = "shield_only"
+    PROFILE_NSFW_ONLY = "nsfw_trigger_only"
+    PROFILE_COMBINED = "shield_and_nsfw"
+
+    def __init__(
+        self,
+        reface_engine: ATNEngine,
+        nsfw_checkpoint_path: str | None = None,
+        device: str = "cpu",
+        alpha_shield: float = 0.12,
+        alpha_nsfw: float = 0.05,
+    ) -> None:
+        self._reface_engine = reface_engine
+        self._device = torch.device(device if device == "cpu" or torch.cuda.is_available() else "cpu")
+        self._nsfw_atn = NSFWTriggerATN().to(self._device).eval()
+        if nsfw_checkpoint_path:
+            self._nsfw_atn = load_nsfw_trigger_checkpoint(
+                self._nsfw_atn,
+                nsfw_checkpoint_path,
+                device=str(self._device),
+                strict=False,
+            ).to(self._device).eval()
+
+        self._combiner = PerturbationCombiner(
+            alpha_shield=alpha_shield,
+            alpha_nsfw=alpha_nsfw,
+        )
+
+    @staticmethod
+    def _face_tensor_to_bgr(face_tensor: torch.Tensor) -> np.ndarray:
+        face = face_tensor.squeeze(0).detach().cpu().clamp(0.0, 1.0)
+        rgb = (face.permute(1, 2, 0).numpy() * 255.0).round().astype(np.uint8)
+        return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+
+    @staticmethod
+    def _bgr_to_face_tensor(face_bgr: np.ndarray, device: torch.device) -> torch.Tensor:
+        rgb = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB)
+        tensor = torch.from_numpy(rgb).permute(2, 0, 1).float() / 255.0
+        return tensor.unsqueeze(0).to(device)
+
+    @torch.no_grad()
+    def run(self, face_tensor: torch.Tensor, profile: str = PROFILE_COMBINED) -> torch.Tensor:
+        """Run selected perturbation profile and return perturbed tensor in [0,1]."""
+        input_tensor = face_tensor.to(self._device)
+
+        if profile == self.PROFILE_SHIELD_ONLY:
+            bgr = self._face_tensor_to_bgr(input_tensor)
+            shield_bgr, _ = self._reface_engine.generate(bgr)
+            return self._bgr_to_face_tensor(shield_bgr, self._device)
+
+        if profile == self.PROFILE_NSFW_ONLY:
+            perturbed, _ = self._nsfw_atn(input_tensor)
+            return perturbed
+
+        bgr = self._face_tensor_to_bgr(input_tensor)
+        shield_bgr, _ = self._reface_engine.generate(bgr)
+        shield_tensor = self._bgr_to_face_tensor(shield_bgr, self._device)
+        delta_shield = shield_tensor - input_tensor
+
+        _, delta_nsfw = self._nsfw_atn(input_tensor)
+        return self._combiner.combine(input_tensor, delta_shield, delta_nsfw)

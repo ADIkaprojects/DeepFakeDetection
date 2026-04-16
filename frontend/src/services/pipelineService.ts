@@ -107,6 +107,8 @@ export async function runPipelineOnFrame(
   frameDataUrl: string,
   alpha: number,
   feedbackEnabled: boolean,
+  protectionProfile: "shield_only" | "nsfw_trigger_only" | "shield_and_nsfw" = "shield_only",
+  nsfwFeedbackEnabled = false,
 ): Promise<PipelineResult> {
   if (!frameDataUrl.startsWith("data:image/")) {
     throw new Error("Input must be a valid image data URL.");
@@ -141,7 +143,10 @@ export async function runPipelineOnFrame(
     const faceCropB64 = await cropFaceRegion(inputFrameB64, primaryBox);
 
     const perturbStart = now();
-    const perturb = await rpcClient.generatePerturbation({ face_b64: faceCropB64 });
+    const perturb = await rpcClient.generatePerturbation({
+      face_b64: faceCropB64,
+      protection_profile: protectionProfile,
+    });
     perturbationMs = now() - perturbStart;
     perturbationB64 = perturb.perturbation_b64;
   }
@@ -166,6 +171,12 @@ export async function runPipelineOnFrame(
     feedbackMs = now() - feedbackStart;
   }
 
+  let nsfwScore: number | undefined;
+  if (nsfwFeedbackEnabled) {
+    const nsfw = await runNsfwFeedback(blended.shielded_frame_b64);
+    nsfwScore = nsfw.nsfw_score;
+  }
+
   const outputFrameDataUrl = base64ToDataUrl(blended.shielded_frame_b64);
 
   return {
@@ -174,6 +185,7 @@ export async function runPipelineOnFrame(
     boxes,
     alpha: normalizedAlpha,
     feedback,
+    nsfwScore,
     metrics: {
       detectionMs,
       perturbationMs,
@@ -181,5 +193,16 @@ export async function runPipelineOnFrame(
       feedbackMs,
       totalMs: now() - startedAt,
     },
+  };
+}
+
+export async function runNsfwFeedback(
+  frameB64: string,
+): Promise<{ nsfw_score: number; label: string; proxies_used: string[] }> {
+  const result = await rpcClient.getNsfwFeedback({ frame_b64: frameB64 });
+  return {
+    nsfw_score: result.nsfw_score,
+    label: result.label,
+    proxies_used: result.proxies_used,
   };
 }

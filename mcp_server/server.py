@@ -15,6 +15,7 @@ from mcp_server.security import RateLimitConfig, SlidingWindowRateLimiter
 from mcp_server.tools.deepfake_feedback import handle_deepfake_feedback, init_deepsafe
 from mcp_server.tools.face_detector import handle_face_detector
 from mcp_server.tools.frame_blender import handle_frame_blender
+from mcp_server.tools.nsfw_feedback import handle_nsfw_feedback
 from mcp_server.tools.perturbation_generator import handle_perturbation_generator
 from mcp_server.validation import SchemaValidationError, load_schemas, validate_payload
 from src.blending.frame_blender import BlendConfig, FrameBlender
@@ -33,6 +34,7 @@ class ServerState:
     detector: FaceDetector
     atn_engine: ATNEngine
     blender: FrameBlender
+    config: dict[str, Any]
     schemas: dict[str, dict[str, Any]]
     api_key: str | None
     limiter: SlidingWindowRateLimiter | None
@@ -41,9 +43,10 @@ class ServerState:
 def build_dispatch(state: ServerState) -> dict[str, Callable[[dict], dict]]:
     return {
         "face_detector": lambda payload: handle_face_detector(state.detector, payload),
-        "perturbation_generator": lambda payload: handle_perturbation_generator(state.atn_engine, payload),
+        "perturbation_generator": lambda payload: handle_perturbation_generator(state.atn_engine, payload, state.config),
         "frame_blender": lambda payload: handle_frame_blender(state.blender, payload),
         "deepfake_feedback": handle_deepfake_feedback,
+        "nsfw_feedback": lambda payload: handle_nsfw_feedback(payload, state.config),
     }
 
 
@@ -209,6 +212,7 @@ def create_state(config: dict[str, Any]) -> ServerState:
         detector=detector,
         atn_engine=atn_engine,
         blender=blender,
+        config=config,
         schemas=schemas,
         api_key=auth_cfg.get("api_key"),
         limiter=limiter,

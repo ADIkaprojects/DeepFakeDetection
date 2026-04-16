@@ -2,7 +2,8 @@ export type RpcMethod =
   | "face_detector"
   | "perturbation_generator"
   | "frame_blender"
-  | "deepfake_feedback";
+  | "deepfake_feedback"
+  | "nsfw_feedback";
 
 export interface JsonRpcRequest<TParams> {
   jsonrpc: "2.0";
@@ -33,11 +34,13 @@ export interface FaceDetectorResponse {
 
 export interface PerturbationGeneratorRequest {
   face_b64: string;
+  protection_profile?: "shield_only" | "nsfw_trigger_only" | "shield_and_nsfw";
 }
 
 export interface PerturbationGeneratorResponse {
   perturbation_b64: string;
   latency_ms?: number;
+  protection_profile?: string;
 }
 
 export interface FrameBlenderRequest {
@@ -60,6 +63,17 @@ export interface DeepfakeFeedbackResponse {
   label?: "real" | "fake";
 }
 
+export interface NsfwFeedbackRequest {
+  frame_b64: string;
+}
+
+export interface NsfwFeedbackResponse {
+  nsfw_score: number;
+  label: "nsfw_flagged" | "safe";
+  proxies_used: string[];
+  error?: string;
+}
+
 export interface PipelineMetrics {
   detectionMs?: number;
   perturbationMs?: number;
@@ -74,6 +88,7 @@ export interface PipelineResult {
   boxes: number[][];
   alpha: number;
   feedback?: DeepfakeFeedbackResponse;
+  nsfwScore?: number;
   metrics: PipelineMetrics;
 }
 

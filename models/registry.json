@@ -13,6 +13,13 @@
       "sha256": "6ef9d4ba27ac325f77a2eb678d511d3440ff08045cc661da83fd5a183c357eee",
       "architecture": "CLIP:ViT-L/14",
       "exported_at": "2026-04-11"
+    },
+    "nsfw_trigger_atn": {
+      "name": "nsfw_trigger_atn",
+      "path": "models/nsfw_trigger_atn.pth",
+      "sha256": "PENDING",
+      "architecture": "NSFWTriggerATN_v1",
+      "exported_at": "PENDING"
     }
   }
 }

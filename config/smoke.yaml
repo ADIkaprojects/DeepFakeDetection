@@ -28,6 +28,14 @@ feedback:
   low_threshold: 0.40
   increase_step: 0.02
 
+nsfw_trigger:
+  enabled: true
+  alpha: 0.05
+  device: cpu
+  proxies:
+    - falconsai
+  protection_profile: shield_and_nsfw
+
 ci:
   counts_as_production_evidence: false
   gate_label: smoke
@@ -52,3 +60,5 @@ models:
   registry_path: models/registry.json
   strict_startup: false
   allow_identity_fallback: true
+  nsfw_trigger_atn:
+    path: models/nsfw_trigger_atn.pth

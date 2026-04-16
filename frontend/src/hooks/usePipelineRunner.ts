@@ -5,6 +5,8 @@ import { runPipelineOnFrame } from "../services/pipelineService";
 export interface PipelineControls {
   alpha: number;
   feedbackEnabled: boolean;
+  nsfwFeedbackEnabled?: boolean;
+  protectionProfile?: "shield_only" | "nsfw_trigger_only" | "shield_and_nsfw";
 }
 
 interface PipelineState {
@@ -38,10 +40,19 @@ function makeLog(level: PipelineLogEntry["level"], message: string): PipelineLog
 
 export function usePipelineRunner() {
   const [state, setState] = useState<PipelineState>(initialState);
+  const [nsfwScore, setNsfwScore] = useState<number | null>(null);
+  const [protectionProfile, setProtectionProfile] = useState<
+    "shield_only" | "nsfw_trigger_only" | "shield_and_nsfw"
+  >("shield_only");
   const intervalRef = useRef<number | null>(null);
   const runInFlightRef = useRef<boolean>(false);
   const latestFrameRef = useRef<string>("");
-  const latestControlsRef = useRef<PipelineControls>({ alpha: 0.12, feedbackEnabled: false });
+  const latestControlsRef = useRef<PipelineControls>({
+    alpha: 0.12,
+    feedbackEnabled: false,
+    nsfwFeedbackEnabled: false,
+    protectionProfile: "shield_only",
+  });
 
   const stopStream = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -54,7 +65,7 @@ export function usePipelineRunner() {
       isStreaming: false,
       logs: [makeLog("info", "Stream mode stopped"), ...prev.logs].slice(0, 50),
     }));
-  }, []);
+  }, [protectionProfile]);
 
   const run = useCallback(async (frameDataUrl: string, controls: PipelineControls) => {
     if (runInFlightRef.current) {
@@ -72,7 +83,10 @@ export function usePipelineRunner() {
         frameDataUrl,
         controls.alpha,
         controls.feedbackEnabled,
+        controls.protectionProfile ?? protectionProfile,
+        controls.nsfwFeedbackEnabled ?? false,
       );
+      setNsfwScore(typeof result.nsfwScore === "number" ? result.nsfwScore : null);
       setState((prev) => ({
         ...prev,
         isRunning: false,
@@ -174,12 +188,24 @@ export function usePipelineRunner() {
   return useMemo(
     () => ({
       ...state,
+      nsfwScore,
+      protectionProfile,
+      setProtectionProfile,
       run,
       startStream,
       stopStream,
       clearLogs,
       reset,
     }),
-    [state, run, startStream, stopStream, clearLogs, reset],
+    [
+      state,
+      nsfwScore,
+      protectionProfile,
+      run,
+      startStream,
+      stopStream,
+      clearLogs,
+      reset,
+    ],
   );
 }

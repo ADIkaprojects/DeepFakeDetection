@@ -9,6 +9,8 @@ import type {
   FrameBlenderResponse,
   JsonRpcRequest,
   JsonRpcResponse,
+  NsfwFeedbackRequest,
+  NsfwFeedbackResponse,
   PerturbationGeneratorRequest,
   PerturbationGeneratorResponse,
   RpcMethod,
@@ -101,6 +103,19 @@ export class RpcClient {
 
     if (!isObject(result) || typeof result.confidence !== "number") {
       throw new Error("deepfake_feedback returned an invalid confidence payload");
+    }
+
+    return result;
+  }
+
+  async getNsfwFeedback(payload: NsfwFeedbackRequest): Promise<NsfwFeedbackResponse> {
+    const result = await this.call<NsfwFeedbackRequest, NsfwFeedbackResponse>(
+      "nsfw_feedback",
+      payload,
+    );
+
+    if (!isObject(result) || typeof result.nsfw_score !== "number") {
+      throw new Error("nsfw_feedback returned an invalid score payload");
     }
 
     return result;

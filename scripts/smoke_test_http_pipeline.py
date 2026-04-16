@@ -106,18 +106,30 @@ def main() -> None:
     if not py.exists():
         raise RuntimeError(f"Python executable not found: {py}")
 
-    proc = subprocess.Popen(
-        [str(py), "-m", "mcp_server.server", "--config", args.config, "--transport", "http"],
-        cwd=str(repo_root),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    health = endpoint.replace("/rpc", "/health")
+    proc: subprocess.Popen[str] | None = None
+    started_local_server = False
 
     try:
-        health = endpoint.replace("/rpc", "/health")
+        probe = requests.get(health, timeout=2)
+        ready = probe.status_code == 200
+    except Exception:
         ready = False
-        for _ in range(60):
+
+    if not ready:
+        proc = subprocess.Popen(
+            [str(py), "-m", "mcp_server.server", "--config", args.config, "--transport", "http"],
+            cwd=str(repo_root),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        started_local_server = True
+
+    try:
+        for _ in range(180):
+            if proc is not None and proc.poll() is not None:
+                raise RuntimeError("MCP server exited before becoming healthy")
             try:
                 r = requests.get(health, timeout=2)
                 if r.status_code == 200:
@@ -128,13 +140,7 @@ def main() -> None:
             time.sleep(1.0)
 
         if not ready:
-            stderr = ""
-            try:
-                _stdout, stderr = proc.communicate(timeout=2)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                _stdout, stderr = proc.communicate()
-            raise RuntimeError(f"MCP server failed to start. stderr: {stderr[:2000]}")
+            raise RuntimeError("MCP server failed to start within timeout")
 
         # use local module functions to avoid duplicating base64 logic
         from src.utils.image_codec import encode_image_to_b64, decode_image_from_b64
@@ -178,23 +184,54 @@ def main() -> None:
             4,
         )
 
+        nsfw_feedback = rpc_call(
+            endpoint,
+            api_key,
+            "nsfw_feedback",
+            {"frame_b64": blended["shielded_frame_b64"]},
+            5,
+        )
+
+        nsfw_perturb = rpc_call(
+            endpoint,
+            api_key,
+            "perturbation_generator",
+            {
+                "face_b64": encode_image_to_b64(crop),
+                "protection_profile": "shield_and_nsfw",
+            },
+            6,
+        )
+        if "perturbation_b64" not in nsfw_perturb:
+            raise RuntimeError("NSFW perturbation call did not return perturbation_b64")
+
         out = decode_image_from_b64(blended["shielded_frame_b64"])
         Path("validation").mkdir(exist_ok=True)
         cv2.imwrite("validation/smoke_output.png", out)
 
         result = {
             "status": "ok",
-            "tools_called": ["face_detector", "perturbation_generator", "frame_blender", "deepfake_feedback"],
+            "tools_called": [
+                "face_detector",
+                "perturbation_generator",
+                "frame_blender",
+                "deepfake_feedback",
+                "nsfw_feedback",
+                "perturbation_generator(shield_and_nsfw)",
+            ],
             "feedback": feedback,
+            "nsfw_feedback": nsfw_feedback,
+            "nsfw_profile": nsfw_perturb.get("protection_profile"),
         }
         Path("validation/smoke_result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
         print(json.dumps(result, indent=2))
     finally:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+        if started_local_server and proc is not None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
 
 if __name__ == "__main__":

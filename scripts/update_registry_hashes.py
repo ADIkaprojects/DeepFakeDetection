@@ -11,6 +11,7 @@ REGISTRY_PATH = BASE / "models" / "registry.json"
 MODEL_FILES = {
     "reface_atn": BASE / "models" / "reface_atn.pth",
     "deepsafe": BASE / "models" / "deepsafe.pth",
+    "nsfw_trigger_atn": BASE / "models" / "nsfw_trigger_atn.pth",
 }
 
 REQUIRED_FIELDS = ("name", "path", "sha256", "architecture", "exported_at")

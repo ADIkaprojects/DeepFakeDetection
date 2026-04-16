@@ -22,6 +22,45 @@ WEIGHTS = {
 }
 
 
+def check_nsfw_trigger_model(config: dict) -> dict:
+    """Check NSFW trigger checkpoint availability and readability."""
+    path = config.get("models", {}).get("nsfw_trigger_atn", {}).get("path", "models/nsfw_trigger_atn.pth")
+    checkpoint = (BASE / path) if not Path(path).is_absolute() else Path(path)
+    if not checkpoint.exists():
+        return {
+            "status": "degraded",
+            "message": f"nsfw_trigger_atn missing at {checkpoint}",
+        }
+
+    try:
+        import torch
+
+        loaded = torch.load(str(checkpoint), map_location="cpu")
+        arch = loaded.get("arch", {}) if isinstance(loaded, dict) else {}
+        return {
+            "status": "ok",
+            "path": str(checkpoint),
+            "arch": arch,
+        }
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}
+
+
+def check_nsfw_proxies(config: dict) -> dict:
+    """Check NSFW proxy ensembles can initialize and report loaded proxies."""
+    try:
+        from src.feedback.nsfw_feedback_engine import NSFWProxyEnsemble
+
+        proxies = config.get("nsfw_trigger", {}).get("proxies", ["falconsai"])
+        ensemble = NSFWProxyEnsemble(device="cpu", proxies=proxies)
+        loaded = list(ensemble._models.keys())
+        if not loaded:
+            return {"status": "degraded", "message": "no NSFW proxies loaded"}
+        return {"status": "ok", "proxies_loaded": loaded}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}
+
+
 def count_images(directory: Path) -> int:
     if not directory.exists():
         return 0
@@ -35,6 +74,13 @@ def count_images(directory: Path) -> int:
 
 
 def run_preflight() -> bool:
+    config_path = BASE / "config" / "default.yaml"
+    config = {}
+    if config_path.exists():
+        import yaml
+
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+
     checks = []
 
     # Data checks
@@ -59,6 +105,11 @@ def run_preflight() -> bool:
     registry_violations = validate_registry(registry_path)
     checks.append(("registry schema valid", len(registry_violations) == 0))
 
+    nsfw_model = check_nsfw_trigger_model(config)
+    nsfw_proxy = check_nsfw_proxies(config)
+    checks.append(("nsfw_trigger_atn status", nsfw_model.get("status") in {"ok", "degraded"}))
+    checks.append(("nsfw_proxy status", nsfw_proxy.get("status") in {"ok", "degraded"}))
+
     print(f"\n{'Check':<40} {'Status':>8}")
     print("-" * 50)
     all_pass = True
@@ -74,6 +125,9 @@ def run_preflight() -> bool:
         print("\n[Registry Violations]")
         for issue in registry_violations:
             print(f"- {issue}")
+
+    print("\n[NSFW Checks]")
+    print(json.dumps({"nsfw_trigger_atn": nsfw_model, "nsfw_proxies": nsfw_proxy}, indent=2))
 
     print(
         f"\n[Counts] real={count_images(REAL_DIR)}  fake={count_images(FAKE_DIR)}  "
